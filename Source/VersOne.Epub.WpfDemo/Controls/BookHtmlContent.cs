@@ -76,6 +76,8 @@ namespace VersOne.Epub.WpfDemo.Controls
             string styleSheetFilePath = GetFullPath(HtmlContentFile.HtmlFilePath, e.Src);
             if (HtmlContentFile.StyleSheets.TryGetValue(styleSheetFilePath, out string styleSheetContent))
             {
+                // remove font-family? due to IndexOutOfRangeException in TheArtOfDev.HtmlRenderer.Core.Parse.CssParser.ParseFontFamilyProperty(string)
+                styleSheetContent = styleSheetContent.Replace("font-family", "delete-font-family");  // make it invalid
                 e.SetStyleSheet = styleSheetContent;
             }
             base.OnStylesheetLoad(e);
@@ -136,7 +138,7 @@ namespace VersOne.Epub.WpfDemo.Controls
                 basePath = Path.GetDirectoryName(basePath);
             }
             string fullPath = String.Concat(basePath.Replace('\\', '/'), '/', relativePath);
-            return fullPath.Length > 1 ? fullPath.Substring(1) : String.Empty;
+            return fullPath.TrimStart('/');
         }
 
         private void RegisterFonts()
