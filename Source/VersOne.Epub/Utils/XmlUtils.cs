@@ -20,21 +20,24 @@ namespace VersOne.Epub.Internal
                 };
                 using (XmlReader xmlReader = XmlReader.Create(memoryStream, xmlReaderSettings))
                 {
-                    return await Task.Run(() => LoadXDocument(memoryStream)).ConfigureAwait(false);
+                    return LoadXDocument(xmlReader, memoryStream, xmlReaderSettings);
                 }
             }
         }
 
-        private static XDocument LoadXDocument(MemoryStream memoryStream)
+        private static XDocument LoadXDocument(XmlReader xmlReader, MemoryStream memoryStream, XmlReaderSettings xmlReaderSettings)
         {
             try
             {
-                return XDocument.Load(memoryStream);
+                return XDocument.Load(xmlReader);
             }
             catch (System.Xml.XmlException xx)
             {
                 if (xx.Message.Contains("'1.1'")) // try to solve the known problem that .NET framework does not support XML version 1.1
                 {
+                    // Make sure the Stream position placed at the beginning to read the entire stream
+                    memoryStream.Position = 0;
+
                     memoryStream.Seek(0, SeekOrigin.Begin);
                     var buffer = new byte[512];
                     var read = memoryStream.Read(buffer, 0, buffer.Length); // read first 512 byte
@@ -46,7 +49,10 @@ namespace VersOne.Epub.Internal
                             memoryStream.Seek(i, SeekOrigin.Begin); // seek to index i
                             memoryStream.WriteByte(0x30);           // replace by '0' to get version number "1.0"
                             memoryStream.Seek(0, SeekOrigin.Begin); // rewind memory stream
-                            return XDocument.Load(memoryStream);
+                            using (var xmlReaderInException = XmlReader.Create(memoryStream, xmlReaderSettings))
+                            {
+                                return XDocument.Load(xmlReaderInException);
+                            }
                         }
                     }
                 }
